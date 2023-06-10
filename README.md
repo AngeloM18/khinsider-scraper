@@ -1,4 +1,4 @@
-![2](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/7241ae57-06c3-4326-8758-7bc6e05ac369)
+![1](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/f48ba80d-e4c5-4a08-a1c2-62a67df51b2c)
 
 # KHINSIDER SCRAPER
 Scraper built on Python to batch download albums from https://downloads.khinsider.com/.
@@ -8,10 +8,8 @@ Scraper built on Python to batch download albums from https://downloads.khinside
  - Can download multiple albums one after another.
  - Can choose the preferred audio file format to download the songs as.
 
-![Animation](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/5cbafc72-e16d-4ef3-a13e-6c14081cfcde)
-
-
-(excuse my slow download speed)
+![Animation](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/a0538ca3-e79d-4b42-839b-d73d3ffd2dc6)
+![Animation2](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/2fd92e8f-2d5f-493e-8102-3e898e9ba1c4)
 
  ## USAGE
  ```
@@ -54,5 +52,6 @@ khinsider.py ...
  ## DONATE
  Consider donating to https://downloads.khinsider.com/ by following the Donate button on the left side bar.
  
- ![1](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/4e8f463a-55d3-4efa-ba56-64b83df76755)
+ ![2](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/8b5f9569-78e2-4e0b-853a-6ba5ad24bf7b)
 
+ 
