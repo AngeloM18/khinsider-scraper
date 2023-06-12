@@ -1,7 +1,6 @@
 from requests import get
 from wrapper import Downloader
 from lib.utils import check_arguments
-from lib.utils import handle_naming
 from __exceptions__.errors import WrongArgument
 from __exceptions__.errors import WrongLink
 import logging
@@ -33,12 +32,10 @@ parser.print_help()
 
 class Scraper():
     __formats__ = ("mp3", "flac")
+    __base_url__ = "https://downloads.khinsider.com/"
 
     def __init__(self, path: str = None, link: str = None, format: str = "flac"):
         self._logger = logging.getLogger(__name__)
-        self._album_name = None
-        self._soup = None
-        self._base_url = "https://downloads.khinsider.com/"
         
         self.base_path = path
         self.link = link
@@ -69,78 +66,95 @@ class Scraper():
         for url in link:
             self._logger.debug(link)
 
-            if not url.startswith(self._base_url):
-                raise WrongLink(url, self._base_url)
+            if not url.startswith(self.__base_url__):
+                raise WrongLink(url, self.__base_url__)
             
-            self._soup = bs4.BeautifulSoup(get(url).text, 'html.parser')
-            self._name()
-            downloader.download(self._art())
-            downloader.download(self._landing_page())
+            soup = bs4.BeautifulSoup(get(url).text, "html.parser")
+            album_name = self.name(soup)
+            downloader.download(self.art(soup, album_name))
+            downloader.download(self.links(soup, album_name))
 
-    def _name(self) -> None:
-        name = self._soup.select('#pageContent > h2')[0].getText()
-        self._album_name = handle_naming(''.join(name.split(':')))
-        print(f"\nSCRAPING {self._album_name.upper()}")
-        os.makedirs(self._album_name, exist_ok=True)
-
-    def _art(self) -> iter:
-        elements = self._soup.find_all('div', 'albumImage')
-        if elements == []:
-            return
-        
-        directory = os.path.join(self.base_path, self._album_name, 'Art')
+    def name(self, soup: bs4.BeautifulSoup) -> str:
+        attributes = {"album_name": "#pageContent > h2"}
+        name = soup.select(attributes["album_name"])[0].getText().split(":")
+        name = self._handle_naming("".join(name))
+        directory = os.path.join(self.base_path, name)
         os.makedirs(directory, exist_ok=True)
 
-        print(f"\nSCRAPING {self._album_name.upper()} ALBUM ART:")
-        for i, tag in enumerate(elements):
-            url = tag.find('a').get('href')
-            art_name = f"{self._album_name} {str(i).zfill(3)}.jpg"
-            file_path = os.path.join(directory, art_name)
+        print(f"\nSCRAPING {name.upper()}")
+        return name
 
-            yield file_path, url, art_name
+    def art(self, soup: bs4.BeautifulSoup, album_name: str) -> iter:
+        attributes = {"images": ["div", "albumImage"]}
+        elements = soup.find_all(*attributes["images"])
+        if elements == []:
+            return
+        directory = os.path.join(self.base_path, album_name, "Art")
+        os.makedirs(directory, exist_ok=True)
+
+        print(f"\nSCRAPING {album_name.upper()} ALBUM ART:")
+        for idx, tag in enumerate(elements):
+            url = tag.find("a").get("href")
+            name = f"{album_name} {str(idx).zfill(3)}.jpg"
+            file_path = os.path.join(directory, name)
+
+            yield file_path, url, name
             
-    def _landing_page(self) -> iter:
-        multiple_cds = True
-        header = self._soup.select('#songlist > #songlist_header > th')
+    def links(self, soup: bs4.BeautifulSoup, album_name: str) -> iter:
+        attributes = {"header": "#songlist > #songlist_header > th",
+                      "table": "#songlist > tr",
+                      "volume": {"align":"center"},
+                      "landing": {"class":"playlistDownloadSong"},
+                      "songlink": "#pageContent > p > a",
+                      "songname": "#pageContent > p > b"
+        }
+        multiple_volumes = True
+        header = soup.select(attributes["header"])
         
-        if header[1].getText() != 'CD':
-            directory = os.path.join(self.base_path, self._album_name)
-            multiple_cds = False
+        if header[1].getText() != "CD":
+            directory = os.path.join(self.base_path, album_name)
+            multiple_volumes = False
         
-        print(f"\nSCRAPING {self._album_name.upper()} SONGS:")
-        table = self._soup.select('#songlist > tr')
+        print(f"\nSCRAPING {album_name.upper()} SONGS:")
+        table = soup.select(attributes["table"])
         for row in table:
-            if row.get('id') == 'songlist_header':
+            if row.get("id") == "songlist_header":
                 continue
-            if row.get('id') == 'songlist_footer':
+            if row.get("id") == "songlist_footer":
                 break
 
-            if multiple_cds:
-                cd_volume = row.find_all('td', attrs={'align':'center'})
-                cd_folder = f"Disc {cd_volume[-1].getText()}"
-                directory = os.path.join(self.base_path, self._album_name, cd_folder)
+            if multiple_volumes:
+                cd_volume = row.find_all("td", attrs=attributes["volume"])[-1].getText()
+                cd_folder = f"Disc %s" % cd_volume #Disc 1|2|3...
+                directory = os.path.join(self.base_path, album_name, cd_folder)
             os.makedirs(directory, exist_ok=True)
 
-            landing_page = row.find('td', attrs={'class':'playlistDownloadSong'}).find('a').get('href')
-            soup = bs4.BeautifulSoup(get(self._base_url + landing_page).text, 'html.parser')
+            landing_page = row.find("td", attrs=attributes["landing"]).find("a").get("href")
+            songsoup = bs4.BeautifulSoup(get(self.__base_url__ + landing_page).text, "html.parser")
 
-            link_container = soup.select('#pageContent > p > a')
-            if len(link_container) > 28 and self.format == "flac":
+            link = songsoup.select(attributes["songlink"])
+            if len(link) > 28 and self.format == "flac":
                 format, idx = ".flac", -1
-            elif len(link_container) == 28 and self.format == 'flac':
+            elif len(link) == 28 and self.format == "flac":
                 format, idx = ".mp3", -1
             else:
                 format, idx = ".mp3", -2
 
-            url = link_container[idx].get("href")
-            song_name = handle_naming(soup.select('#pageContent > p > b')[2].getText())
-            file_path = os.path.join(directory, song_name + format)
+            url = link[idx].get("href")
+            name = self._handle_naming(songsoup.select(attributes["songname"])[2].getText())
+            file_path = os.path.join(directory, name + format)
             
-            yield file_path, url, song_name + format
-        
+            yield file_path, url, name + format
+
+    @staticmethod
+    def _handle_naming(name: str) -> str:
+        name = "".join([c for c in name if not c in ":/?*<>|\"\\"])
+        name = " ".join(map(str.capitalize, name.replace("_", " ").split(" ")))
+        return name.rstrip("mp3flac.").lstrip("0123456789 ")
+
 
 def main():
     Scraper()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
