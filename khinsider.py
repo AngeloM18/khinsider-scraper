@@ -1,12 +1,15 @@
 from requests import get
+from sys import argv
 from wrapper import Downloader
-from lib.utils import check_arguments
+from lib.utils import check_missing
 from __exceptions__.errors import WrongArgument
 from __exceptions__.errors import WrongLink
+from __exceptions__.errors import InvalidPath
 import logging
 import argparse
 import bs4
 import os
+
 
 print("""
 ██╗  ██╗██╗  ██╗██╗███╗   ██╗███████╗██╗██████╗ ███████╗██████╗ 
@@ -30,49 +33,57 @@ parser.add_argument("-l", "--link", nargs="+", help="enter the album links separ
 parser.add_argument("-F", "--fileformat", help="(optional) specifies in which format to download the songs as: flac or mp3 (flac by default)")
 parser.print_help()
 
-class Scraper():
+class Scraper(Downloader):
+    """Scraper class
+        Arguments:
+        base_path (str): Directory (absolute or relative) to download the albums in.
+        Keyword arguments: 
+        format (str - optional): File format for the songs (mp3 or flac). Default file format: "flac"
+    """ 
     __formats__ = ("mp3", "flac")
     __base_url__ = "https://downloads.khinsider.com/"
 
-    def __init__(self, path: str = None, link: str = None, format: str = "flac"):
-        self._logger = logging.getLogger(__name__)
-        
-        self.base_path = path
-        self.link = link
+    def __init__(self, base_path: str = None, format: str = "flac"):
         self.format = format.lower()
+        self.base_path = base_path
+        self._logger = logging.getLogger(__name__)
+        super().__init__()
 
-        if path and link:
-            self.base_path = path
-            self.link = link.split(" ")
+        if len(argv) > 1:
+            args = parser.parse_args()
+            if args.link and args.path:
+                self.base_path = args.path
+                link = args.link
+                if args.fileformat:
+                    self.format = args.fileformat.lower()
         
-        self.args = parser.parse_args()
-        if self.args.link and self.args.path:
-            self.base_path = self.args.path
-            self.link = self.args.link
-            if self.args.fileformat:
-                self.format = self.args.fileformat.lower()
-
         if not (self.format in self.__formats__):
-            raise WrongArgument(self.args.fileformat)
+            raise WrongArgument(self.format)
+        if not os.path.exists(self.base_path):
+            raise InvalidPath(self.base_path)
 
-        if not (self.base_path and self.link):
-            arguments = {"path": self.base_path, "link": self.link}
-            check_arguments(arguments)
+        if len(argv) > 1:
+            self.start(link)
 
-        self.start(self.link)
+    def start(self, link: str = None):
+        """Starter method, calls all the other functions inside the class needed to scrape and download albums.
+        Arguments:
+        link (str): Link(s) of the albums to download. Must have https://downloads.khinsider.com/ as their base.
+        """
+        if not len(argv) > 1:
+            link = link.split(" ") 
+        if not (self.base_path and link):
+            arguments = {"path": self.base_path, "link": link}
+            check_missing(arguments)
 
-    def start(self, link):
-        downloader = Downloader()
         for url in link:
-            self._logger.debug(link)
-
             if not url.startswith(self.__base_url__):
                 raise WrongLink(url, self.__base_url__)
             
             soup = bs4.BeautifulSoup(get(url).text, "html.parser")
             album_name = self.name(soup)
-            downloader.download(self.art(soup, album_name))
-            downloader.download(self.links(soup, album_name))
+            self.download(self.art(soup, album_name))
+            self.download(self.links(soup, album_name))
 
     def name(self, soup: bs4.BeautifulSoup) -> str:
         attributes = {"album_name": "#pageContent > h2"}
@@ -146,12 +157,32 @@ class Scraper():
             
             yield file_path, url, name + format
 
+    def change_directory(self, directory: str):
+        """Changes the set download path for the instance.
+        Arguments:
+        directory (str): New directory for the albums.
+        """
+        self.base_path = directory
+        if not os.path.exists(self.directory):
+            raise InvalidPath(directory)
+        return self
+    
+    def change_format(self, format: str):
+        """Changes the set audio file format for the instance.
+        Arguments:
+        format (str): Set format for the songs. Valid audio file formats mp3 or flac
+        """
+        self.format = format
+        if not (format in self.__formats__):
+            raise WrongArgument(self.format)
+        return self
+    
     @staticmethod
     def _handle_naming(name: str) -> str:
         name = "".join([c for c in name if not c in ":/?*<>|\"\\"])
         name = " ".join(map(str.capitalize, name.replace("_", " ").split(" ")))
         return name.rstrip("mp3flac.").lstrip("0123456789 ")
-
+    
 
 def main():
     Scraper()

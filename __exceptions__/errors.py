@@ -24,3 +24,10 @@ class WrongLink(Exception):
 
     def __str__(self):
         return f"Invalid URL: ({self.link}). Only URLs with base: {self.base_url}"
+    
+class InvalidPath(Exception):
+    def __init__(self, path):
+        self.path = path
+
+    def __str__(self):
+        return f"Can't find the path specified: {self.path}"

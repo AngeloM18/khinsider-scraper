@@ -7,8 +7,7 @@ class Downloader(object):
     def __init__(self):
         self.session = requests.session()
         self.session.headers.update(
-            {"Content-Type": "application/json;charset=utf-8",
-            "User-Agent": "khinsder-scraper/" + __version__}
+            {"User-Agent": "khinsder-scraper/" + __version__}
         )
         
     def download(self, generator):
