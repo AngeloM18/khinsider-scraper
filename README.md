@@ -11,9 +11,6 @@ Scraper built on Python to batch download albums from https://downloads.khinside
 ![Animation](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/a0538ca3-e79d-4b42-839b-d73d3ffd2dc6)
 ![Animation2](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/2fd92e8f-2d5f-493e-8102-3e898e9ba1c4)
 
-# TODO:
-- Implement SOLID principles.
-
  ## USAGE
  ```
  khinsider.py [-h] [-p PATH] [-l LINK [LINK ...]] [-F FILEFORMAT]
