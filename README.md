@@ -1,3 +1,5 @@
+One year later, I reckon the code is kinda crap! Don't laugh - thanks!
+
 ![1](https://github.com/1898Angelo/khinsider-scraper/assets/123282394/f48ba80d-e4c5-4a08-a1c2-62a67df51b2c)
 
 # KHINSIDER SCRAPER
